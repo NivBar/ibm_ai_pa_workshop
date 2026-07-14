@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bob + Planning Analytics MCP Workshop Guide</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --ink: #101828;
+      --muted: #546179;
+      --soft: #eef3f8;
+      --line: #d8e0ea;
+      --panel: #ffffff;
+      --panel-strong: #0f172a;
+      --blue: #2563eb;
+      --cyan: #0891b2;
+      --green: #0f8f6a;
+      --gold: #a16207;
+      --rose: #be123c;
+      --violet: #6d28d9;
+      --shadow: 0 18px 50px rgba(15, 23, 42, 0.10);
+      --radius: 8px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 28%),
+        linear-gradient(225deg, rgba(15, 143, 106, 0.10), transparent 24%),
+        var(--bg);
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 0.92em;
+      color: #1d4ed8;
+    }
+
+    .shell {
+      min-height: 100vh;
+    }
+
+    .hero {
+      color: #fff;
+      background:
+        linear-gradient(135deg, rgba(8, 18, 38, 0.94), rgba(18, 40, 74, 0.90)),
+        radial-gradient(circle at 80% 20%, rgba(8, 145, 178, 0.46), transparent 32%),
+        radial-gradient(circle at 16% 20%, rgba(109, 40, 217, 0.34), transparent 30%);
+      padding: 44px clamp(18px, 4vw, 58px) 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .hero-grid {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+      gap: 34px;
+      align-items: stretch;
+    }
+
+    .hero h1 {
+      margin: 0;
+      max-width: 920px;
+      font-size: clamp(42px, 6vw, 76px);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+    }
+
+    .hero .lead {
+      margin: 22px 0 0;
+      max-width: 780px;
+      color: #dbeafe;
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.45;
+    }
+
+    .hero-card {
+      align-self: stretch;
+      display: grid;
+      gap: 16px;
+      padding: 22px;
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(14px);
+    }
+
+    .hero-card h2 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero-card ul,
+    .compact-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .hero-card li,
+    .compact-list li {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr);
+      gap: 10px;
+      font-size: 15px;
+    }
+
+    .hero-card li {
+      color: #ecfeff;
+    }
+
+    .compact-list li {
+      color: #134e4a;
+    }
+
+    .check {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #10b981;
+      color: #052e1c;
+      font-weight: 800;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, 0.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 10px clamp(14px, 3vw, 24px);
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .nav a {
+      flex: 0 0 auto;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      color: #334155;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .nav a:hover {
+      color: var(--blue);
+      border-color: #bfdbfe;
+      background: #eff6ff;
+    }
+
+    main {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px clamp(16px, 3vw, 24px) 64px;
+    }
+
+    .section {
+      margin-top: 28px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: var(--shadow);
+      scroll-margin-top: 76px;
+    }
+
+    .section.compact {
+      box-shadow: none;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .section-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 20px;
+      align-items: start;
+      margin-bottom: 22px;
+    }
+
+    .section h2 {
+      margin: 0;
+      font-size: clamp(28px, 3vw, 44px);
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+    }
+
+    .section h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+    }
+
+    .purpose {
+      margin: 10px 0 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #ecfeff;
+      border: 1px solid #a5f3fc;
+      color: #155e75;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .badge.report {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      color: #166534;
+    }
+
+    .badge.bonus {
+      background: #f5f3ff;
+      border-color: #ddd6fe;
+      color: #5b21b6;
+    }
+
+    .grid-2,
+    .grid-3 {
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid-2 {
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 18px;
+    }
+
+    .panel.dark {
+      color: #e5f0ff;
+      background: linear-gradient(135deg, #111827, #172554);
+      border-color: rgba(255, 255, 255, 0.10);
+    }
+
+    .panel.dark p,
+    .panel.dark li {
+      color: #dbeafe;
+    }
+
+    .panel.tint-blue { background: #eff6ff; border-color: #bfdbfe; }
+    .panel.tint-green { background: #ecfdf5; border-color: #bbf7d0; }
+    .panel.tint-gold { background: #fffbeb; border-color: #fde68a; }
+    .panel.tint-violet { background: #f5f3ff; border-color: #ddd6fe; }
+
+    .steps {
+      margin: 0;
+      padding-left: 20px;
+      color: #334155;
+    }
+
+    .steps li + li {
+      margin-top: 8px;
+    }
+
+    .prompt-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .prompt-card {
+      border: 1px solid #cbd5e1;
+      border-radius: var(--radius);
+      background: #0b1220;
+      overflow: hidden;
+    }
+
+    .prompt-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      color: #dbeafe;
+      background: #111827;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .prompt-title {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #93c5fd;
+    }
+
+    .copy-btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.08);
+      color: #eff6ff;
+      border-radius: 6px;
+      padding: 7px 10px;
+      font: 800 12px var(--sans);
+      cursor: pointer;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .prompt-card pre {
+      margin: 0;
+      padding: 16px;
+      color: #f8fafc;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font: 14px/1.55 var(--mono);
+    }
+
+    .checkpoint {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: #f8fafc;
+      border: 1px dashed #b6c3d4;
+    }
+
+    .checkpoint strong {
+      color: #0f172a;
+    }
+
+    .report-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      font-size: 13px;
+      font-weight: 800;
+      width: fit-content;
+    }
+
+    .mermaid-wrap {
+      overflow-x: auto;
+      padding: 18px;
+      border-radius: var(--radius);
+      background: #ffffff;
+      border: 1px solid var(--line);
+    }
+
+    .tracker {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .track-item {
+      min-height: 96px;
+      padding: 12px;
+      border-radius: var(--radius);
+      background: #fff;
+      border: 1px solid var(--line);
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .track-item span {
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--blue);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .track-item strong {
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .track-item small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .final-checklist {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .final-checklist li {
+      display: grid;
+      grid-template-columns: 22px minmax(0, 1fr);
+      gap: 10px;
+      padding: 12px;
+      border-radius: var(--radius);
+      background: #fff;
+      border: 1px solid var(--line);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .tab-btn {
+      appearance: none;
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 9px 12px;
+      background: #fff;
+      color: #334155;
+      font: 800 13px var(--sans);
+    }
+
+    .tab-btn.active {
+      color: #fff;
+      background: var(--violet);
+      border-color: var(--violet);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .footer-note {
+      margin-top: 30px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .grid-2,
+      .grid-3,
+      .tracker,
+      .final-checklist {
+        grid-template-columns: 1fr;
+      }
+
+      .section-header {
+        grid-template-columns: 1fr;
+      }
+
+      .section {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero" id="top">
+      <div class="hero-grid">
+        <div>
+          <h1>Build an executive revenue report with Bob and Planning Analytics MCP</h1>
+          <p class="lead">Use Bob to connect to trusted Planning Analytics data, reason through Q4 performance, and assemble a polished Word report one section at a time.</p>
+        </div>
+        <aside class="hero-card" aria-label="Workshop starting checklist">
+          <h2>Start here</h2>
+          <ul>
+            <li><span class="check">✓</span><span>Bob is your primary assistant for every exercise.</span></li>
+            <li><span class="check">✓</span><span>Your workspace has the unified Planning Analytics MCP server configured: <code>ibm-pa-tools</code>.</span></li>
+            <li><span class="check">✓</span><span>The final deliverable is a Word report: <code>Q4 2023 Revenue Analysis</code>.</span></li>
+            <li><span class="check">✓</span><span>Every report prompt asks Bob to read the current report before appending.</span></li>
+          </ul>
+        </aside>
+      </div>
+    </header>
+
+    <nav class="nav" aria-label="Workshop navigation">
+      <div class="nav-inner">
+        <a href="#connection">Connection</a>
+        <a href="#source">Source</a>
+        <a href="#baseline">Baseline</a>
+        <a href="#regions">Regions</a>
+        <a href="#channels">Channels</a>
+        <a href="#products">Products</a>
+        <a href="#trend">Trend</a>
+        <a href="#yoy">YoY</a>
+        <a href="#visuals">Visuals</a>
+        <a href="#synthesis">Synthesis</a>
+        <a href="#reuse">Bob Reuse</a>
+        <a href="#bonus">wxO Appendix</a>
+      </div>
+    </nav>
+
+    <main>
+      <section class="section compact" id="journey">
+        <div class="section-header">
+          <div>
+            <span class="badge">Workshop story</span>
+            <h2>From governed planning data to an executive-ready Word report</h2>
+            <p class="purpose">The exercises tell one story. Each step adds a new piece of evidence to the same report, so the final document feels authored rather than stitched together.</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="mermaid-wrap">
+            <pre class="mermaid">flowchart TD
+  Bob["Bob"] --> MCP["Unified MCP server: ibm-pa-tools"]
+  MCP --> PA["Planning Analytics / NewRetail"]
+  PA --> Cubes["Revenue cube"]
+  Cubes --> Analysis["Analysis and reasoning"]
+  Analysis --> Report["Q4 2023 Revenue Analysis.docx"]</pre>
+          </div>
+          <div class="mermaid-wrap">
+            <pre class="mermaid">flowchart TD
+  A["Find source of truth"] --> B["Baseline revenue"]
+  B --> C["Regional variance"]
+  C --> D["Channel mix"]
+  D --> E["Product performance"]
+  E --> F["Trend and YoY context"]
+  F --> G["Charts"]
+  G --> H["Executive summary and recommendations"]</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="section compact" id="report-progress">
+        <div class="section-header">
+          <div>
+            <span class="badge report">Report build path</span>
+            <h2>Your report grows as the analysis gets sharper</h2>
+            <p class="purpose">Use this tracker to make sure each exercise contributes one distinct section.</p>
+          </div>
+        </div>
+        <div class="tracker">
+          <div class="track-item"><span>1</span><strong>Data Source and Scope</strong><small>Server, cube, dimensions.</small></div>
+          <div class="track-item"><span>2</span><strong>Revenue Overview</strong><small>Q4 Actual, Budget, variance.</small></div>
+          <div class="track-item"><span>3</span><strong>Regional Performance</strong><small>Best and weakest regions.</small></div>
+          <div class="track-item"><span>4</span><strong>Channel Mix</strong><small>Revenue share and risk.</small></div>
+          <div class="track-item"><span>5</span><strong>Product Performance</strong><small>Top categories and drivers.</small></div>
+          <div class="track-item"><span>6</span><strong>Trend and YoY</strong><small>Momentum and context.</small></div>
+          <div class="track-item"><span>7</span><strong>Visual Evidence</strong><small>Charts embedded in Word.</small></div>
+          <div class="track-item"><span>8</span><strong>Insights</strong><small>Top findings with evidence.</small></div>
+          <div class="track-item"><span>9</span><strong>Recommendations</strong><small>Q1 actions tied to findings.</small></div>
+          <div class="track-item"><span>10</span><strong>Executive Summary</strong><small>Updated last.</small></div>
+          <div class="track-item"><span>11</span><strong>Appendix</strong><small>MCP prompts and saved views.</small></div>
+          <div class="track-item"><span>12</span><strong>Reusable Template</strong><small>Bob workflow pattern.</small></div>
+        </div>
+      </section>
+
+      <section class="section compact" id="rules">
+        <div class="section-header">
+          <div>
+            <span class="badge">Coherence rule</span>
+            <h2>Before Bob appends anything, make Bob read the report</h2>
+            <p class="purpose">This is the difference between a professional report and a pile of AI outputs.</p>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="panel tint-blue">
+            <h3>Always include this instruction</h3>
+            <div class="prompt-card">
+              <div class="prompt-top">
+                <span class="prompt-title">Reusable guardrail</span>
+                <button class="copy-btn" type="button">Copy</button>
+              </div>
+              <pre>Read the existing Q4 2023 Revenue Analysis report first.
+
+Preserve the current structure, tone, terminology, and formatting.
+Append or update only the requested section.
+Avoid duplicate insights.
+Do not invent missing metrics.</pre>
+            </div>
+          </div>
+          <div class="panel tint-green">
+            <h3>Report quality checks</h3>
+            <ul class="compact-list" style="color:#134e4a">
+              <li><span class="check">✓</span><span>Every section has a clear purpose.</span></li>
+              <li><span class="check">✓</span><span>Every insight traces back to Planning Analytics data.</span></li>
+              <li><span class="check">✓</span><span>No section repeats a prior section in different words.</span></li>
+              <li><span class="check">✓</span><span>The executive summary is updated last.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="connection">
+        <div class="section-header">
+          <div>
+            <span class="badge">Confirm the connection</span>
+            <h2>Make sure Bob can reach Planning Analytics</h2>
+            <p class="purpose">Start by proving Bob is using the unified <code>ibm-pa-tools</code> MCP server, not guessing from general knowledge.</p>
+          </div>
+          <span class="report-pill">Report section: none yet</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Open Bob in your workspace.</li>
+              <li>Confirm your workspace includes the unified Planning Analytics MCP server: <code>ibm-pa-tools</code>.</li>
+              <li>If the server is missing, add the MCP configuration below in Bob.</li>
+              <li>Ask Bob to list available TM1 servers.</li>
+              <li>Confirm <code>NewRetail</code> appears in the result.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>You see <code>NewRetail</code> and can say: "Bob is connected through the unified <code>ibm-pa-tools</code> MCP server."</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">MCP configuration</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>{
+  "mcpServers": {
+    "ibm-pa-tools": {
+      "type": "streamable-http",
+      "url": "https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/agentic-ai/ibm-pa-tools/mcp",
+      "headers": {
+        "Authorization": "Basic YXBpa2V5OmF6STZObU14TkRjMVkyRXRaVFF4T0MwME56TmxMV0V4WVRNdFlXVmpPVEpsTXpBNFpHUmxPamN5TDFwTFowVmxVbXhyVUV0SkswaFRTbTR3ZW5OUk1pdHRURzg1TW05NFNrSk9UUzlEWjJ4d1QyYzk="
+      },
+      "timeout": 600,
+      "disabled": false
+    }
+  }
+}</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>What TM1 servers are available in Planning Analytics? Confirm whether NewRetail is available.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="source">
+        <div class="section-header">
+          <div>
+            <span class="badge">Find the source of truth</span>
+            <h2>Choose the cube that can answer the CFO question</h2>
+            <p class="purpose">Move from "ask AI" to "ask the right governed planning model." The report begins by documenting the source and scope.</p>
+          </div>
+          <span class="report-pill">Adds: Data Source and Scope</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>List NewRetail cubes.</li>
+              <li>Find cubes relevant to Q4 revenue analysis.</li>
+              <li>Identify AI-analyzed cubes.</li>
+              <li>Inspect the Revenue cube dimensions.</li>
+              <li>Create the first version of the Word report.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>You can name the server, cube, and core dimensions used by the report.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Discovery prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Show me the cubes available on the NewRetail server. Highlight which cubes are most relevant for Q4 revenue analysis.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">AI-ready cubes</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Which cubes are AI-analyzed and ready for natural language questions?</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Dimension prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>What dimensions does the Revenue cube have? Include dimension types and explain how each one helps answer Q4 revenue questions.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Report prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Create a Word report titled "Q4 2023 Revenue Analysis".
+
+Before writing, use the Planning Analytics results from this session.
+
+Add:
+1. A professional cover page.
+2. A placeholder table of contents.
+3. A "Data Source and Scope" section explaining that this report uses the NewRetail Planning Analytics server and the Revenue cube.
+
+Keep the writing concise and executive-ready. Do not invent metrics.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="baseline">
+        <div class="section-header">
+          <div>
+            <span class="badge">Establish the revenue baseline</span>
+            <h2>Get the first real numbers into the report</h2>
+            <p class="purpose">The baseline anchors the rest of the analysis: Actual, Budget, variance dollars, and variance percent.</p>
+          </div>
+          <span class="report-pill">Adds: Revenue Performance Overview</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Query total Q4 revenue.</li>
+              <li>Ask for Actual and Budget versions.</li>
+              <li>Calculate variance in dollars and percent.</li>
+              <li>Append only the overview section to the Word report.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>Your report has a concise overview and does not repeat the source/scope language.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Baseline prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Using the Revenue cube on NewRetail, show total Q4 2023 revenue. Include Actual and Budget if available.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Variance prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Calculate the Q4 2023 Actual vs Budget variance in dollars and percent. Keep the result suitable for an executive summary.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Report prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Open the existing Q4 2023 Revenue Analysis report and read the current sections.
+
+Add a "Revenue Performance Overview" section using the Q4 Actual, Budget, and variance results from Planning Analytics.
+
+Do not repeat the Data Source and Scope section. Use the same concise executive tone. If any metric is missing, mark it as "not returned by query" rather than inventing it.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="regions">
+        <div class="section-header">
+          <div>
+            <span class="badge">Find the regional performance gap</span>
+            <h2>Turn the total number into a management insight</h2>
+            <p class="purpose">Regional variance shows where leadership should celebrate, intervene, or ask sharper questions.</p>
+          </div>
+          <span class="report-pill">Adds: Regional Performance</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Query Q4 revenue by region.</li>
+              <li>Compare Actual vs Budget.</li>
+              <li>Rank by variance percent.</li>
+              <li>Identify the strongest region and the region requiring attention.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>Your section has a ranking table and two clear takeaways.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Regional table</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Show Q4 2023 revenue by region with Actual, Budget, variance dollars, and variance percent.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Reasoning prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Which regions exceeded budget and which missed budget? Rank them by variance percent and explain the business implication in plain executive language.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Report prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the existing Q4 2023 Revenue Analysis report first.
+
+Append a "Regional Performance" section with:
+1. A short executive paragraph.
+2. A table ranking regions by variance percent.
+3. Two bullets: strongest region and region requiring attention.
+
+Avoid duplicating the Revenue Performance Overview. Keep terminology consistent with prior sections.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="channels">
+        <div class="section-header">
+          <div>
+            <span class="badge">Understand channel mix</span>
+            <h2>Find where revenue is concentrated</h2>
+            <p class="purpose">Channel mix helps the CFO distinguish broad demand from concentration risk.</p>
+          </div>
+          <span class="report-pill">Adds: Channel Mix</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Query Q4 Actual revenue by channel.</li>
+              <li>Calculate each channel's share of total revenue.</li>
+              <li>Identify one risk and one opportunity.</li>
+              <li>Append the Channel Mix section.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>You have channel revenue, share of total, and a data-backed risk/opportunity.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Channel mix</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Show Q4 2023 Actual revenue by channel and calculate each channel's share of total Q4 revenue.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Risk and opportunity</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Based on the channel mix, identify one concentration risk and one growth opportunity. Ground the answer in the returned Planning Analytics data.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Report prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the existing Q4 2023 Revenue Analysis report first.
+
+Append a "Channel Mix" section using the latest channel revenue query.
+
+Include:
+1. A channel mix table with revenue and percent of total.
+2. One risk insight.
+3. One opportunity insight.
+
+Do not repeat regional observations unless they directly explain channel performance.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section compact" id="midpoint">
+        <div class="section-header">
+          <div>
+            <span class="badge report">Midpoint checkpoint</span>
+            <h2>Your report should now have a spine</h2>
+            <p class="purpose">Pause here and scan the Word document before adding more analysis.</p>
+          </div>
+        </div>
+        <ul class="final-checklist">
+          <li><span class="check">✓</span><span>Cover page and placeholder table of contents exist.</span></li>
+          <li><span class="check">✓</span><span>Data Source and Scope names NewRetail and the Revenue cube.</span></li>
+          <li><span class="check">✓</span><span>Revenue Overview, Regional Performance, and Channel Mix are distinct.</span></li>
+          <li><span class="check">✓</span><span>Terminology and tone are consistent across sections.</span></li>
+        </ul>
+      </section>
+
+      <section class="section" id="products">
+        <div class="section-header">
+          <div>
+            <span class="badge">Drill into product performance</span>
+            <h2>Explain what is driving the revenue story</h2>
+            <p class="purpose">Product analysis adds operational texture: which categories carried performance, and which deserve attention.</p>
+          </div>
+          <span class="report-pill">Adds: Product Performance</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Preview product members or categories.</li>
+              <li>Query Q4 Actual revenue by product category.</li>
+              <li>Rank categories by revenue.</li>
+              <li>Write the product performance section.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>The report names the main product/category driver and one watch item.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Product discovery</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Show sample product members in the Revenue cube and identify the main product categories available for analysis.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Product ranking</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Show Q4 2023 Actual revenue by product category. Rank the categories from highest to lowest revenue.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Product reasoning</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Which product categories are driving Q4 performance? Provide a concise explanation suitable for a CFO report.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Report prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the existing Q4 2023 Revenue Analysis report first.
+
+Append a "Product Performance" section with:
+1. Ranked product or product category table.
+2. A concise paragraph explaining the main revenue driver.
+3. One watch item if any product/category underperformed or appears immaterial.
+
+Keep the wording aligned to the prior executive report sections.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="trend">
+        <div class="section-header">
+          <div>
+            <span class="badge">Explain the trend</span>
+            <h2>Separate momentum from a static snapshot</h2>
+            <p class="purpose">Monthly trend analysis gives leadership a sense of trajectory heading into Q1.</p>
+          </div>
+          <span class="report-pill">Adds: Monthly Trend Analysis</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Query monthly Actual revenue for the year.</li>
+              <li>Calculate month-over-month growth rates.</li>
+              <li>Focus on the Q4 pattern.</li>
+              <li>Add one implication for Q1 planning.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>The report explains whether Q4 showed acceleration, slowdown, or anomaly.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Monthly trend</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Show monthly Actual revenue for 2023 from the Revenue cube. Include month-over-month growth rates.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Q4 pattern</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Focus on Q4 2023. What pattern do October, November, and December show? Identify any acceleration, slowdown, or anomaly.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Report prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the existing Q4 2023 Revenue Analysis report first.
+
+Append a "Monthly Trend Analysis" section.
+
+Include:
+1. A concise trend narrative.
+2. A monthly table for Q4.
+3. Month-over-month growth rates.
+4. One implication for Q1 planning.
+
+Do not repeat total Q4 variance unless it is needed to explain the trend.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="yoy">
+        <div class="section-header">
+          <div>
+            <span class="badge">Add year-over-year context</span>
+            <h2>Show whether performance is broad-based or isolated</h2>
+            <p class="purpose">YoY comparison gives executives context beyond budget variance.</p>
+          </div>
+          <span class="report-pill">Adds: Year-over-Year Comparison</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Compare Q4 2023 Actual to Q4 2022 Actual.</li>
+              <li>Break the comparison down by region.</li>
+              <li>Identify the biggest contributors to YoY growth.</li>
+              <li>Append the YoY section.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>The report says whether growth appears broad-based or concentrated.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">YoY total</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Compare Q4 2023 Actual revenue to Q4 2022 Actual revenue. Show total growth in dollars and percent.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">YoY by region</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Break the Q4 2023 vs Q4 2022 comparison by region. Which regions contributed most to year-over-year growth?</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Report prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the existing Q4 2023 Revenue Analysis report first.
+
+Append a "Year-over-Year Comparison" section using the Q4 2023 vs Q4 2022 Planning Analytics results.
+
+Include:
+1. Total YoY growth.
+2. Regional YoY comparison table.
+3. One sentence explaining whether Q4 performance appears broad-based or concentrated.
+
+Avoid repeating the Regional Performance section unless needed for comparison.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="visuals">
+        <div class="section-header">
+          <div>
+            <span class="badge">Create visual evidence</span>
+            <h2>Turn the analysis into executive-ready charts</h2>
+            <p class="purpose">Charts should support the sections already written, not introduce a separate storyline.</p>
+          </div>
+          <span class="report-pill">Adds: Charts in Word</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Create Actual vs Budget by Region.</li>
+              <li>Create Revenue by Channel.</li>
+              <li>Create Monthly Actual Revenue trend.</li>
+              <li>Create Q4 2023 vs Q4 2022 by Region.</li>
+              <li>Embed charts into the matching Word sections.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>Your Word report has at least three clear charts with readable labels.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Visualization prompt</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the existing Q4 2023 Revenue Analysis report and the data gathered in this session.
+
+Generate charts for:
+1. Q4 Actual vs Budget by Region.
+2. Q4 Revenue by Channel.
+3. Monthly Actual Revenue trend for 2023.
+4. Q4 2023 vs Q4 2022 Revenue by Region.
+
+Embed the charts into the relevant report sections. Use clear titles, readable labels, and executive-friendly formatting.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="synthesis">
+        <div class="section-header">
+          <div>
+            <span class="badge">Synthesize the executive story</span>
+            <h2>Make the final report feel authored</h2>
+            <p class="purpose">Now Bob should synthesize, not repeat. Update the executive summary last, after the evidence is complete.</p>
+          </div>
+          <span class="report-pill">Adds: Insights, Recommendations, Summary</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Append five evidence-backed insights.</li>
+              <li>Append practical Q1 recommendations.</li>
+              <li>Update the executive summary last.</li>
+              <li>Run a final consistency pass.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>The executive summary reflects the finished report and does not duplicate details.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Key insights</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the full Q4 2023 Revenue Analysis report.
+
+Append a "Key Insights" section with the top five insights from the analysis.
+
+Each insight must:
+1. Reference evidence already in the report.
+2. Avoid repeating the same point from another insight.
+3. Explain why it matters to executives.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Recommendations</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the full report.
+
+Append a "Q1 2024 Recommendations" section with 3-5 practical recommendations.
+
+Each recommendation should connect to a specific finding in the report. Keep recommendations realistic and data-backed.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Executive summary</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Read the full report.
+
+Now update the Executive Summary so it accurately reflects the final report.
+
+Keep it concise:
+1. Overall Q4 performance.
+2. Largest positive driver.
+3. Largest concern.
+4. One forward-looking recommendation.
+
+Do not duplicate the detailed sections.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="reuse">
+        <div class="section-header">
+          <div>
+            <span class="badge">Make it reusable with Bob</span>
+            <h2>Turn the workshop into analyst leverage</h2>
+            <p class="purpose">The goal is not just one report. It is a reusable pattern for future planning questions.</p>
+          </div>
+          <span class="report-pill">Adds: Appendix template</span>
+        </div>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Do this</h3>
+            <ol class="steps">
+              <li>Ask Bob to create a reusable report prompt template.</li>
+              <li>Optionally create a saved Planning Analytics view if your environment supports it.</li>
+              <li>Add the reusable pattern to the report appendix.</li>
+            </ol>
+            <div class="checkpoint"><strong>Checkpoint</strong><span>You can reuse the workflow with a different period, cube, or output file name.</span></div>
+          </div>
+          <div class="prompt-stack">
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Reusable template</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Turn the Q4 revenue report workflow into a reusable Bob prompt template.
+
+The template should accept:
+1. Server name.
+2. Cube name.
+3. Quarter.
+4. Year.
+5. Output file name.
+
+It should require reading the existing report before updating and should prevent duplicate insights.</pre>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Optional saved view</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>If supported in this environment, create a reusable saved view for Q4 revenue by region with Actual and Budget versions. Name it Executive_Q4_Report_View.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section compact" id="final">
+        <div class="section-header">
+          <div>
+            <span class="badge report">Final Word report check</span>
+            <h2>Before you hand it to the CFO</h2>
+            <p class="purpose">Run this last pass so the report reads like one authored document.</p>
+          </div>
+        </div>
+        <div class="mermaid-wrap" style="margin-bottom:18px">
+          <pre class="mermaid">flowchart LR
+  Scope["Data Source and Scope"] --> Overview["Revenue Overview"]
+  Overview --> Region["Regional Performance"]
+  Region --> Channel["Channel Mix"]
+  Channel --> Product["Product Performance"]
+  Product --> Trend["Trend and YoY"]
+  Trend --> Insights["Insights and Recommendations"]</pre>
+        </div>
+        <ul class="final-checklist">
+          <li><span class="check">✓</span><span>The report is a Word document named clearly for Q4 2023 revenue analysis.</span></li>
+          <li><span class="check">✓</span><span>Every section uses Planning Analytics evidence, not invented metrics.</span></li>
+          <li><span class="check">✓</span><span>Charts are embedded in the sections they support.</span></li>
+          <li><span class="check">✓</span><span>Insights and recommendations do not repeat the same point.</span></li>
+          <li><span class="check">✓</span><span>The executive summary is updated last and reflects the whole report.</span></li>
+          <li><span class="check">✓</span><span>The appendix captures reusable prompts or saved views for future work.</span></li>
+        </ul>
+      </section>
+
+      <section class="section" id="bonus">
+        <div class="section-header">
+          <div>
+            <span class="badge bonus">wxO appendix</span>
+            <h2>Expose the same question in wxO</h2>
+            <p class="purpose">Run the same Q4 revenue question from wxO using a single read-only request.</p>
+          </div>
+          <span class="report-pill">Read-only</span>
+        </div>
+        <div class="tabs" role="tablist" aria-label="wxO appendix tabs">
+          <button class="tab-btn active" type="button" data-tab="bonus-request">Business request</button>
+          <button class="tab-btn" type="button" data-tab="bonus-setup">Setup files</button>
+          <button class="tab-btn" type="button" data-tab="bonus-boundaries">Boundaries</button>
+        </div>
+        <div class="tab-panel active" id="bonus-request">
+          <div class="grid-2">
+            <div class="panel tint-violet">
+              <h3>Use one complex, read-only request</h3>
+              <p>Ask for one complete business answer. Keep the request read-only and focused on Q4 revenue performance.</p>
+            </div>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">wxO request</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>For NewRetail, analyze Q4 2023 revenue performance using the available Planning Analytics tools. Include total revenue, budget variance, strongest and weakest regions, channel mix, and one recommendation for Q1 2024. Keep all operations read-only.</pre>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="bonus-setup">
+          <div class="panel">
+            <h3>Setup files</h3>
+            <p>Use <code>WORKSHOP_OPTIONAL_MCP_WXO_SETUP.md</code> as the setup reference, and point the connection to the unified <code>ibm-pa-tools</code> MCP server.</p>
+            <div class="prompt-card">
+              <div class="prompt-top"><span class="prompt-title">Setup reference note</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>Open WORKSHOP_OPTIONAL_MCP_WXO_SETUP.md and follow the setup steps for the wxO appendix. Use the unified ibm-pa-tools MCP endpoint for Planning Analytics.</pre>
+            </div>
+          </div>
+        </div>
+        <div class="tab-panel" id="bonus-boundaries">
+          <div class="panel tint-gold">
+            <h3>Do not include</h3>
+            <ul class="steps">
+              <li>No recurring workflows.</li>
+              <li>No scheduled routines.</li>
+              <li>No business process automation demo.</li>
+              <li>No destructive Planning Analytics actions.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    if (window.mermaid) {
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: "loose",
+        theme: "base",
+        themeVariables: {
+          primaryColor: "#eff6ff",
+          primaryTextColor: "#0f172a",
+          primaryBorderColor: "#2563eb",
+          lineColor: "#64748b",
+          secondaryColor: "#ecfdf5",
+          tertiaryColor: "#f5f3ff"
+        }
+      });
+    }
+
+    document.querySelectorAll(".copy-btn").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const card = button.closest(".prompt-card");
+        const text = card ? card.querySelector("pre").innerText : "";
+        try {
+          await navigator.clipboard.writeText(text);
+          const previous = button.textContent;
+          button.textContent = "Copied";
+          setTimeout(() => { button.textContent = previous; }, 1300);
+        } catch (error) {
+          const range = document.createRange();
+          const pre = card.querySelector("pre");
+          range.selectNodeContents(pre);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          button.textContent = "Selected";
+        }
+      });
+    });
+
+    document.querySelectorAll(".tab-btn").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = button.dataset.tab;
+        document.querySelectorAll(".tab-btn").forEach((item) => item.classList.remove("active"));
+        document.querySelectorAll(".tab-panel").forEach((panel) => panel.classList.remove("active"));
+        button.classList.add("active");
+        document.getElementById(target).classList.add("active");
+      });
+    });
+  </script>
+</body>
+</html>
