@@ -676,7 +676,7 @@ Do not invent missing metrics.</pre>
       "type": "streamable-http",
       "url": "https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/agentic-ai/ibm-pa-tools/mcp",
       "headers": {
-        "Authorization": "Basic YXBpa2V5OmF6STZObU14TkRjMVkyRXRaVFF4T0MwME56TmxMV0V4WVRNdFlXVmpPVEpsTXpBNFpHUmxPamN5TDFwTFowVmxVbXhyVUV0SkswaFRTbTR3ZW5OUk1pdHRURzg1TW05NFNrSk9UUzlEWjJ4d1QyYzk="
+        "Authorization": "Basic replace-with-planning-analytics-basic-auth"
       },
       "timeout": 600,
       "disabled": false
@@ -1223,13 +1223,13 @@ It should require reading the existing report before updating and should prevent
         </div>
         <div class="tab-panel" id="bonus-setup">
           <div class="panel">
-            <h3>Optional: Build the PA MCP wxO Files From Scratch</h3>
-            <p>Use this when a participant starts with a blank workspace and only has their own <code>mcp.json</code>. The <code>mcp.json</code> can stay as-is; this wxO import path uses the files below.</p>
+            <h3>Connect Planning Analytics MCP to wxO With ADK</h3>
+            <p>Use the hosted unified Planning Analytics MCP endpoint directly. No Python wrapper or local MCP server is needed.</p>
 
             <h4 style="margin:1.2rem 0 0.4rem">Step 1 — Create the folder structure</h4>
             <div class="prompt-card">
               <div class="prompt-top"><span class="prompt-title">bash</span><button class="copy-btn" type="button">Copy</button></div>
-              <pre>mkdir -p pa_mcp_wrapper/pa_mcp_wrapper agent scripts</pre>
+              <pre>mkdir -p wxo agent scripts</pre>
             </div>
             <p style="margin:.6rem 0 .2rem">Expected structure after creating the files:</p>
             <div class="prompt-card">
@@ -1239,229 +1239,25 @@ It should require reading the existing report before updating and should prevent
 ├── README_WXO_DEPLOYMENT.md
 ├── agent
 │   └── pa_newretail_agent.yaml
-├── pa_mcp_wrapper
-│   ├── pa_mcp_wrapper
-│   │   ├── __init__.py
-│   │   ├── __main__.py
-│   │   └── server.py
-│   └── pyproject.toml
-└── scripts
-    └── import_pa_wxo.sh</pre>
+├── scripts
+│   └── import_pa_wxo.sh
+└── wxo
+    └── ibm_pa_tools_toolkit.yaml</pre>
             </div>
 
-            <h4 style="margin:1.2rem 0 0.4rem">Step 2 — <code>pa_mcp_wrapper/pyproject.toml</code></h4>
+            <h4 style="margin:1.2rem 0 0.4rem">Step 2 — <code>wxo/ibm_pa_tools_toolkit.yaml</code></h4>
             <div class="prompt-card">
-              <div class="prompt-top"><span class="prompt-title">toml</span><button class="copy-btn" type="button">Copy</button></div>
-              <pre>[project]
-name = "pa-mcp-wrapper"
-version = "0.1.0"
-description = "MCP wrapper for IBM Planning Analytics SaaS"
-requires-python = ">=3.11"
-dependencies = [
-  "mcp",
-  "requests",
-]
-
-[project.scripts]
-pa-mcp-wrapper = "pa_mcp_wrapper.server:main"</pre>
+              <div class="prompt-top"><span class="prompt-title">yaml</span><button class="copy-btn" type="button">Copy</button></div>
+              <pre>name: ibm-pa-tools
+description: IBM Planning Analytics unified MCP tools for NewRetail.
+kind: mcp
+transport: streamable_http
+url: "https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/agentic-ai/ibm-pa-tools/mcp"
+tools:
+  - "*"</pre>
             </div>
 
-            <h4 style="margin:1.2rem 0 0.4rem">Step 3 — <code>pa_mcp_wrapper/pa_mcp_wrapper/__init__.py</code></h4>
-            <div class="prompt-card">
-              <div class="prompt-top"><span class="prompt-title">python</span><button class="copy-btn" type="button">Copy</button></div>
-              <pre>"""IBM Planning Analytics MCP wrapper."""</pre>
-            </div>
-
-            <h4 style="margin:1.2rem 0 0.4rem">Step 4 — <code>pa_mcp_wrapper/pa_mcp_wrapper/__main__.py</code></h4>
-            <div class="prompt-card">
-              <div class="prompt-top"><span class="prompt-title">python</span><button class="copy-btn" type="button">Copy</button></div>
-              <pre>from .server import main
-
-
-if __name__ == "__main__":
-    main()</pre>
-            </div>
-
-            <h4 style="margin:1.2rem 0 0.4rem">Step 5 — <code>pa_mcp_wrapper/pa_mcp_wrapper/server.py</code></h4>
-            <div class="prompt-card">
-              <div class="prompt-top"><span class="prompt-title">python</span><button class="copy-btn" type="button">Copy</button></div>
-              <pre>import base64
-import os
-from typing import Any
-
-import requests
-from mcp.server.fastmcp import FastMCP
-
-
-TENANT_ID = os.getenv("PA_TENANT_ID", "DLKN379EQ2M7")
-DEFAULT_SERVER = os.getenv("PA_SERVER", "NewRetail")
-PA_BASE_URL = os.getenv(
-    "PA_BASE_URL",
-    f"https://eu-central-1.planninganalytics.saas.ibm.com/api/{TENANT_ID}/v0/tm1",
-).rstrip("/")
-
-mcp = FastMCP("IBM Planning Analytics SaaS")
-
-
-def _authorization_header() -> str:
-    direct = _first_env(
-        "Authorization",
-        "AUTHORIZATION",
-        "PA_AUTHORIZATION",
-        "PA_MCP_AUTHORIZATION",
-    )
-    if direct:
-        return direct if direct.lower().startswith("basic ") else f"Basic {direct}"
-
-    encoded = _first_env("PA_API_KEY", "API_KEY_BASE64", "PA_API_KEY_BASE64")
-    if encoded:
-        return f"Basic {encoded}"
-
-    original = _first_env("PA_API_KEY_ORIGINAL", "PA_ORIGINAL_API_KEY", "PA_PASSWORD")
-    if original:
-        token = base64.b64encode(f"apikey:{original}".encode("utf-8")).decode("ascii")
-        return f"Basic {token}"
-
-    raise RuntimeError(
-        "Missing PA credentials. Provide Authorization, PA_API_KEY, or PA_API_KEY_ORIGINAL."
-    )
-
-
-def _first_env(*names: str) -> str | None:
-    env_variants = {}
-    for key, value in os.environ.items():
-        env_variants[key] = value
-        env_variants[key.upper()] = value
-        env_variants[key.upper().replace("-", "_")] = value
-
-    for name in names:
-        value = env_variants.get(name) or env_variants.get(name.upper())
-        if value:
-            return value
-    return None
-
-
-def _tm1_get(path: str, server: str = DEFAULT_SERVER, params: dict[str, Any] | None = None) -> dict[str, Any]:
-    url = f"{PA_BASE_URL}/{server}/api/v1/{path.lstrip('/')}"
-    response = requests.get(
-        url,
-        headers={
-            "Authorization": _authorization_header(),
-            "Accept": "application/json",
-        },
-        params=params,
-        timeout=60,
-    )
-    response.raise_for_status()
-    return response.json()
-
-
-def _values(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    value = payload.get("value", [])
-    return value if isinstance(value, list) else []
-
-
-@mcp.tool()
-def get_available_tm1_servers() -> dict[str, Any]:
-    """Return the configured Planning Analytics TM1 server available to this MCP wrapper."""
-    return {
-        "servers": [
-            {
-                "name": DEFAULT_SERVER,
-                "base_url": f"{PA_BASE_URL}/{DEFAULT_SERVER}/api/v1",
-            }
-        ]
-    }
-
-
-@mcp.tool()
-def list_server_cubes_with_metadata(server: str = DEFAULT_SERVER, limit: int = 50) -> dict[str, Any]:
-    """List cubes and key metadata for a TM1 server."""
-    top = max(1, min(int(limit), 200))
-    payload = _tm1_get(
-        "Cubes",
-        server=server,
-        params={
-            "$top": top,
-            "$select": "Name,LastSchemaUpdate,LastDataUpdate,Locked,Attributes",
-        },
-    )
-    cubes = []
-    for cube in _values(payload):
-        cubes.append(
-            {
-                "name": cube.get("Name"),
-                "last_schema_update": cube.get("LastSchemaUpdate"),
-                "last_data_update": cube.get("LastDataUpdate"),
-                "locked": cube.get("Locked"),
-                "attributes": cube.get("Attributes") or {},
-            }
-        )
-    return {"server": server, "count": len(cubes), "cubes": cubes}
-
-
-@mcp.tool()
-def get_mdx_for_recommended_view(
-    cube_name: str,
-    server: str = DEFAULT_SERVER,
-) -> dict[str, Any]:
-    """Generate a simple MDX query for a cube using the first member of each dimension."""
-    payload = _tm1_get(
-        f"Cubes('{_escape_odata(cube_name)}')/Dimensions",
-        server=server,
-        params={"$select": "Name"},
-    )
-    dimensions = [item.get("Name") for item in _values(payload) if item.get("Name")]
-    if not dimensions:
-        return {
-            "server": server,
-            "cube": cube_name,
-            "mdx": f"SELECT FROM [{cube_name}]",
-            "note": "No dimensions were returned for this cube.",
-        }
-
-    rows = dimensions[0]
-    slicers = dimensions[1:]
-    where_clause = ""
-    if slicers:
-        where_clause = " WHERE (" + ", ".join(f"[{dim}].Members.Item(0)" for dim in slicers) + ")"
-    mdx = f"SELECT {{[{rows}].Members}} ON ROWS FROM [{cube_name}]{where_clause}"
-    return {"server": server, "cube": cube_name, "dimensions": dimensions, "mdx": mdx}
-
-
-@mcp.tool()
-def get_tm1_process_details(
-    process_name: str | None = None,
-    server: str = DEFAULT_SERVER,
-    limit: int = 50,
-) -> dict[str, Any]:
-    """Return process metadata, or details for one process when process_name is supplied."""
-    if process_name:
-        payload = _tm1_get(f"Processes('{_escape_odata(process_name)}')", server=server)
-        return {"server": server, "process": payload}
-
-    top = max(1, min(int(limit), 200))
-    payload = _tm1_get(
-        "Processes",
-        server=server,
-        params={"$top": top, "$select": "Name,HasSecurityAccess"},
-    )
-    return {"server": server, "count": len(_values(payload)), "processes": _values(payload)}
-
-
-def _escape_odata(value: str) -> str:
-    return value.replace("'", "''")
-
-
-def main() -> None:
-    mcp.run(transport="stdio")
-
-
-if __name__ == "__main__":
-    main()</pre>
-            </div>
-
-            <h4 style="margin:1.2rem 0 0.4rem">Step 6 — <code>agent/pa_newretail_agent.yaml</code></h4>
+            <h4 style="margin:1.2rem 0 0.4rem">Step 3 — <code>agent/pa_newretail_agent.yaml</code></h4>
             <div class="prompt-card">
               <div class="prompt-top"><span class="prompt-title">yaml</span><button class="copy-btn" type="button">Copy</button></div>
               <pre>name: pa_newretail_agent
@@ -1486,11 +1282,10 @@ llm: groq/openai/gpt-oss-120b
 style: default
 
 tools:
-  - my-pa-saas-server:get_available_tm1_servers
-  - my-pa-saas-server:list_server_cubes_with_metadata
-  - my-pa-saas-server:get_mdx_for_recommended_view
-  - my-pa-saas-server:get_tm1_process_details
-  - my-pa-saas-server-analysis:get_tm1_process_details
+  - ibm-pa-tools:get_available_tm1_servers
+  - ibm-pa-tools:list_server_cubes_with_metadata
+  - ibm-pa-tools:get_mdx_for_recommended_view
+  - ibm-pa-tools:get_tm1_process_details
 
 config:
   hidden: false
@@ -1503,7 +1298,7 @@ tags:
   - newretail</pre>
             </div>
 
-            <h4 style="margin:1.2rem 0 0.4rem">Step 7 — <code>scripts/import_pa_wxo.sh</code></h4>
+            <h4 style="margin:1.2rem 0 0.4rem">Step 4 — <code>scripts/import_pa_wxo.sh</code></h4>
             <div class="prompt-card">
               <div class="prompt-top"><span class="prompt-title">bash</span><button class="copy-btn" type="button">Copy</button></div>
               <pre>#!/usr/bin/env bash
@@ -1516,36 +1311,27 @@ cd "$PROJECT_ROOT"
 : "${WXO_API_KEY:?Set WXO_API_KEY}"
 : "${PA_AUTHORIZATION_HEADER:?Set PA_AUTHORIZATION_HEADER}"
 
+PA_MCP_URL="${PA_MCP_URL:-https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/agentic-ai/ibm-pa-tools/mcp}"
+PA_CONNECTION_URL="${PA_CONNECTION_URL:-https://eu-central-1.planninganalytics.saas.ibm.com}"
+
 echo "Activating wxO environment: ${WXO_ENV_NAME}"
 orchestrate env activate "$WXO_ENV_NAME" --api-key "$WXO_API_KEY" --skip-version-check
 
 echo "Creating/updating PA key-value connection"
 orchestrate connections add -a pa_mcp_auth || true
-orchestrate connections configure -a pa_mcp_auth --env draft --type team --kind key_value --server-url "${PA_BASE_URL:-https://eu-central-1.planninganalytics.saas.ibm.com}" || true
-orchestrate connections configure -a pa_mcp_auth --env live --type team --kind key_value --server-url "${PA_BASE_URL:-https://eu-central-1.planninganalytics.saas.ibm.com}" || true
+orchestrate connections configure -a pa_mcp_auth --env draft --type team --kind key_value --server-url "$PA_CONNECTION_URL" || true
+orchestrate connections configure -a pa_mcp_auth --env live --type team --kind key_value --server-url "$PA_CONNECTION_URL" || true
 orchestrate connections set-credentials -a pa_mcp_auth --env draft -e "Authorization=${PA_AUTHORIZATION_HEADER}"
 orchestrate connections set-credentials -a pa_mcp_auth --env live -e "Authorization=${PA_AUTHORIZATION_HEADER}"
 
-echo "Importing PA cube MCP toolkit"
+echo "Importing unified Planning Analytics MCP toolkit"
 orchestrate toolkits add \
   --kind mcp \
-  --name my-pa-saas-server \
-  --description "IBM Planning Analytics SaaS MCP wrapper for NewRetail" \
-  --package-root "$PROJECT_ROOT/pa_mcp_wrapper" \
-  --language python \
-  --command "python -m pa_mcp_wrapper" \
-  --tools get_available_tm1_servers,list_server_cubes_with_metadata,get_mdx_for_recommended_view,get_tm1_process_details \
-  --app-id pa_mcp_auth
-
-echo "Importing PA analysis MCP toolkit"
-orchestrate toolkits add \
-  --kind mcp \
-  --name my-pa-saas-server-analysis \
-  --description "IBM Planning Analytics SaaS process analysis MCP wrapper for NewRetail" \
-  --package-root "$PROJECT_ROOT/pa_mcp_wrapper" \
-  --language python \
-  --command "python -m pa_mcp_wrapper" \
-  --tools get_tm1_process_details \
+  --name ibm-pa-tools \
+  --description "IBM Planning Analytics unified MCP tools for NewRetail" \
+  --url "$PA_MCP_URL" \
+  --transport streamable_http \
+  --tools "*" \
   --app-id pa_mcp_auth
 
 echo "Creating PA NewRetail agent"
@@ -1562,7 +1348,7 @@ echo "  orchestrate agents list"</pre>
               <pre>chmod +x scripts/import_pa_wxo.sh</pre>
             </div>
 
-            <h4 style="margin:1.2rem 0 0.4rem">Step 8 — <code>.env.example</code></h4>
+            <h4 style="margin:1.2rem 0 0.4rem">Step 5 — <code>.env.example</code></h4>
             <div class="prompt-card">
               <div class="prompt-top"><span class="prompt-title">bash</span><button class="copy-btn" type="button">Copy</button></div>
               <pre># wxO target
@@ -1574,42 +1360,40 @@ WXO_API_KEY=replace-with-their-wxo-api-key
 # PA_AUTHORIZATION_HEADER="Basic base64-of-apikey-colon-api-key"
 PA_AUTHORIZATION_HEADER=replace-with-basic-auth-header
 
-# Planning Analytics REST defaults used by the wrapper
+# Planning Analytics hosted MCP defaults
 PA_TENANT_ID=DLKN379EQ2M7
 PA_SERVER=NewRetail
-PA_BASE_URL=https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/tm1</pre>
+PA_CONNECTION_URL=https://eu-central-1.planninganalytics.saas.ibm.com
+PA_MCP_URL=https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/agentic-ai/ibm-pa-tools/mcp</pre>
             </div>
 
-            <h4 style="margin:1.2rem 0 0.4rem">Step 9 — <code>README_WXO_DEPLOYMENT.md</code></h4>
+            <h4 style="margin:1.2rem 0 0.4rem">Step 6 — <code>README_WXO_DEPLOYMENT.md</code></h4>
             <div class="prompt-card">
               <div class="prompt-top"><span class="prompt-title">markdown</span><button class="copy-btn" type="button">Copy</button></div>
               <pre># Deloitte PA wxO Project
 
-This folder contains the working watsonx Orchestrate deployment assets for the Planning Analytics NewRetail MCP wrapper.
+This folder contains the working watsonx Orchestrate deployment assets for the Planning Analytics NewRetail MCP connection.
 
 ## Important Files
 
-- `pa_mcp_wrapper/` - local MCP server package that wraps the working Planning Analytics REST API.
+- `wxo/ibm_pa_tools_toolkit.yaml` - reference toolkit YAML for the hosted unified Planning Analytics MCP endpoint.
 - `agent/pa_newretail_agent.yaml` - agent definition for the PA NewRetail assistant.
-- `scripts/import_pa_wxo.sh` - repeatable import script for the connection, MCP toolkits, and agent.
+- `scripts/import_pa_wxo.sh` - repeatable ADK import script for the connection, hosted MCP toolkit, and agent.
 - `.env.example` - template for local environment variables. Copy it to `.env` and fill values locally.
 
 ## What This Deploys
 
-The deployment creates a key-value connection named `pa_mcp_auth`, imports two MCP toolkits, and creates an agent named `pa_newretail_agent`.
+The deployment creates a key-value connection named `pa_mcp_auth`, imports one hosted MCP toolkit named `ibm-pa-tools`, and creates an agent named `pa_newretail_agent`.
 
-The cube toolkit imports:
+The agent currently references:
 - `get_available_tm1_servers`
 - `list_server_cubes_with_metadata`
 - `get_mdx_for_recommended_view`
 - `get_tm1_process_details`
 
-The analysis toolkit imports:
-- `get_tm1_process_details`
-
 ## Basic Flow
 
-1. Verify your wxO CLI is installed and logged in.
+1. Verify your wxO ADK CLI is installed and logged in.
 2. Copy `.env.example` to `.env`.
 3. Fill in non-placeholder values in `.env`.
 4. Source `.env`.
@@ -1619,7 +1403,7 @@ The analysis toolkit imports:
 Do not commit or share `.env`, API keys, private keys, or generated credential exports.</pre>
             </div>
 
-            <h4 style="margin:1.2rem 0 0.4rem">Step 10 — Run the setup</h4>
+            <h4 style="margin:1.2rem 0 0.4rem">Step 7 — Run the setup</h4>
             <div class="prompt-card">
               <div class="prompt-top"><span class="prompt-title">bash</span><button class="copy-btn" type="button">Copy</button></div>
               <pre>cp .env.example .env

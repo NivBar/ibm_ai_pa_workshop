@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+: "${WXO_ENV_NAME:?Set WXO_ENV_NAME}"
+: "${WXO_API_KEY:?Set WXO_API_KEY}"
+: "${PA_AUTHORIZATION_HEADER:?Set PA_AUTHORIZATION_HEADER}"
+
+echo "Activating wxO environment: ${WXO_ENV_NAME}"
+orchestrate env activate "$WXO_ENV_NAME" --api-key "$WXO_API_KEY" --skip-version-check
+
+echo "Creating/updating PA key-value connection"
+orchestrate connections add -a pa_mcp_auth || true
+orchestrate connections configure -a pa_mcp_auth --env draft --type team --kind key_value --server-url "${PA_BASE_URL:-https://eu-central-1.planninganalytics.saas.ibm.com}" || true
+orchestrate connections configure -a pa_mcp_auth --env live --type team --kind key_value --server-url "${PA_BASE_URL:-https://eu-central-1.planninganalytics.saas.ibm.com}" || true
+orchestrate connections set-credentials -a pa_mcp_auth --env draft -e "Authorization=${PA_AUTHORIZATION_HEADER}"
+orchestrate connections set-credentials -a pa_mcp_auth --env live -e "Authorization=${PA_AUTHORIZATION_HEADER}"
+
+echo "Importing PA cube MCP toolkit"
+orchestrate toolkits add \
+  --kind mcp \
+  --name my-pa-saas-server \
+  --description "IBM Planning Analytics SaaS MCP wrapper for NewRetail" \
+  --package-root "$PROJECT_ROOT/pa_mcp_wrapper" \
+  --language python \
+  --command "python -m pa_mcp_wrapper" \
+  --tools get_available_tm1_servers,list_server_cubes_with_metadata,get_mdx_for_recommended_view,get_tm1_process_details \
+  --app-id pa_mcp_auth
+
+echo "Importing PA analysis MCP toolkit"
+orchestrate toolkits add \
+  --kind mcp \
+  --name my-pa-saas-server-analysis \
+  --description "IBM Planning Analytics SaaS process analysis MCP wrapper for NewRetail" \
+  --package-root "$PROJECT_ROOT/pa_mcp_wrapper" \
+  --language python \
+  --command "python -m pa_mcp_wrapper" \
+  --tools get_tm1_process_details \
+  --app-id pa_mcp_auth
+
+echo "Creating PA NewRetail agent"
+orchestrate agents create \
+  --file "$PROJECT_ROOT/agent/pa_newretail_agent.yaml"
+
+echo "Done. Verify with:"
+echo "  orchestrate toolkits list"
+echo "  orchestrate agents list"

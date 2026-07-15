@@ -1,0 +1,7 @@
+name: ibm-pa-tools
+description: IBM Planning Analytics unified MCP tools for NewRetail.
+kind: mcp
+transport: streamable_http
+url: "https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/agentic-ai/ibm-pa-tools/mcp"
+tools:
+  - "*"

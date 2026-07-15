@@ -1,0 +1,433 @@
+# Optional Workshop Step: Build the PA MCP wxO Files From Scratch
+
+Use this when a participant starts with a blank workspace and only has their
+own `mcp.json`. The `mcp.json` can stay as-is; this wxO import path uses the
+files below.
+
+## 1. Create the folder structure
+
+```bash
+mkdir -p pa_mcp_wrapper/pa_mcp_wrapper agent scripts
+```
+
+Expected structure after creating the files:
+
+```text
+.
+├── .env.example
+├── README_WXO_DEPLOYMENT.md
+├── agent
+│   └── pa_newretail_agent.yaml
+├── pa_mcp_wrapper
+│   ├── pa_mcp_wrapper
+│   │   ├── __init__.py
+│   │   ├── __main__.py
+│   │   └── server.py
+│   └── pyproject.toml
+└── scripts
+    └── import_pa_wxo.sh
+```
+
+## 2. Create `pa_mcp_wrapper/pyproject.toml`
+
+```toml
+[project]
+name = "pa-mcp-wrapper"
+version = "0.1.0"
+description = "MCP wrapper for IBM Planning Analytics SaaS"
+requires-python = ">=3.11"
+dependencies = [
+  "mcp",
+  "requests",
+]
+
+[project.scripts]
+pa-mcp-wrapper = "pa_mcp_wrapper.server:main"
+```
+
+## 3. Create `pa_mcp_wrapper/pa_mcp_wrapper/__init__.py`
+
+```python
+"""IBM Planning Analytics MCP wrapper."""
+```
+
+## 4. Create `pa_mcp_wrapper/pa_mcp_wrapper/__main__.py`
+
+```python
+from .server import main
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## 5. Create `pa_mcp_wrapper/pa_mcp_wrapper/server.py`
+
+```python
+import base64
+import os
+from typing import Any
+
+import requests
+from mcp.server.fastmcp import FastMCP
+
+
+TENANT_ID = os.getenv("PA_TENANT_ID", "DLKN379EQ2M7")
+DEFAULT_SERVER = os.getenv("PA_SERVER", "NewRetail")
+PA_BASE_URL = os.getenv(
+    "PA_BASE_URL",
+    f"https://eu-central-1.planninganalytics.saas.ibm.com/api/{TENANT_ID}/v0/tm1",
+).rstrip("/")
+
+mcp = FastMCP("IBM Planning Analytics SaaS")
+
+
+def _authorization_header() -> str:
+    direct = _first_env(
+        "Authorization",
+        "AUTHORIZATION",
+        "PA_AUTHORIZATION",
+        "PA_MCP_AUTHORIZATION",
+    )
+    if direct:
+        return direct if direct.lower().startswith("basic ") else f"Basic {direct}"
+
+    encoded = _first_env("PA_API_KEY", "API_KEY_BASE64", "PA_API_KEY_BASE64")
+    if encoded:
+        return f"Basic {encoded}"
+
+    original = _first_env("PA_API_KEY_ORIGINAL", "PA_ORIGINAL_API_KEY", "PA_PASSWORD")
+    if original:
+        token = base64.b64encode(f"apikey:{original}".encode("utf-8")).decode("ascii")
+        return f"Basic {token}"
+
+    raise RuntimeError(
+        "Missing PA credentials. Provide Authorization, PA_API_KEY, or PA_API_KEY_ORIGINAL."
+    )
+
+
+def _first_env(*names: str) -> str | None:
+    env_variants = {}
+    for key, value in os.environ.items():
+        env_variants[key] = value
+        env_variants[key.upper()] = value
+        env_variants[key.upper().replace("-", "_")] = value
+
+    for name in names:
+        value = env_variants.get(name) or env_variants.get(name.upper())
+        if value:
+            return value
+    return None
+
+
+def _tm1_get(path: str, server: str = DEFAULT_SERVER, params: dict[str, Any] | None = None) -> dict[str, Any]:
+    url = f"{PA_BASE_URL}/{server}/api/v1/{path.lstrip('/')}"
+    response = requests.get(
+        url,
+        headers={
+            "Authorization": _authorization_header(),
+            "Accept": "application/json",
+        },
+        params=params,
+        timeout=60,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def _values(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    value = payload.get("value", [])
+    return value if isinstance(value, list) else []
+
+
+@mcp.tool()
+def get_available_tm1_servers() -> dict[str, Any]:
+    """Return the configured Planning Analytics TM1 server available to this MCP wrapper."""
+    return {
+        "servers": [
+            {
+                "name": DEFAULT_SERVER,
+                "base_url": f"{PA_BASE_URL}/{DEFAULT_SERVER}/api/v1",
+            }
+        ]
+    }
+
+
+@mcp.tool()
+def list_server_cubes_with_metadata(server: str = DEFAULT_SERVER, limit: int = 50) -> dict[str, Any]:
+    """List cubes and key metadata for a TM1 server."""
+    top = max(1, min(int(limit), 200))
+    payload = _tm1_get(
+        "Cubes",
+        server=server,
+        params={
+            "$top": top,
+            "$select": "Name,LastSchemaUpdate,LastDataUpdate,Locked,Attributes",
+        },
+    )
+    cubes = []
+    for cube in _values(payload):
+        cubes.append(
+            {
+                "name": cube.get("Name"),
+                "last_schema_update": cube.get("LastSchemaUpdate"),
+                "last_data_update": cube.get("LastDataUpdate"),
+                "locked": cube.get("Locked"),
+                "attributes": cube.get("Attributes") or {},
+            }
+        )
+    return {"server": server, "count": len(cubes), "cubes": cubes}
+
+
+@mcp.tool()
+def get_mdx_for_recommended_view(
+    cube_name: str,
+    server: str = DEFAULT_SERVER,
+) -> dict[str, Any]:
+    """Generate a simple MDX query for a cube using the first member of each dimension."""
+    payload = _tm1_get(
+        f"Cubes('{_escape_odata(cube_name)}')/Dimensions",
+        server=server,
+        params={"$select": "Name"},
+    )
+    dimensions = [item.get("Name") for item in _values(payload) if item.get("Name")]
+    if not dimensions:
+        return {
+            "server": server,
+            "cube": cube_name,
+            "mdx": f"SELECT FROM [{cube_name}]",
+            "note": "No dimensions were returned for this cube.",
+        }
+
+    rows = dimensions[0]
+    slicers = dimensions[1:]
+    where_clause = ""
+    if slicers:
+        where_clause = " WHERE (" + ", ".join(f"[{dim}].Members.Item(0)" for dim in slicers) + ")"
+    mdx = f"SELECT {{[{rows}].Members}} ON ROWS FROM [{cube_name}]{where_clause}"
+    return {"server": server, "cube": cube_name, "dimensions": dimensions, "mdx": mdx}
+
+
+@mcp.tool()
+def get_tm1_process_details(
+    process_name: str | None = None,
+    server: str = DEFAULT_SERVER,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Return process metadata, or details for one process when process_name is supplied."""
+    if process_name:
+        payload = _tm1_get(f"Processes('{_escape_odata(process_name)}')", server=server)
+        return {"server": server, "process": payload}
+
+    top = max(1, min(int(limit), 200))
+    payload = _tm1_get(
+        "Processes",
+        server=server,
+        params={"$top": top, "$select": "Name,HasSecurityAccess"},
+    )
+    return {"server": server, "count": len(_values(payload)), "processes": _values(payload)}
+
+
+def _escape_odata(value: str) -> str:
+    return value.replace("'", "''")
+
+
+def main() -> None:
+    mcp.run(transport="stdio")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+## 6. Create `agent/pa_newretail_agent.yaml`
+
+```yaml
+name: pa_newretail_agent
+description: |
+  Agent for exploring IBM Planning Analytics data in the NewRetail TM1 server.
+
+instructions: |
+  You help users inspect IBM Planning Analytics content in the NewRetail TM1 server.
+
+  Use the available tools to:
+  - list the available TM1 server
+  - list cubes and cube metadata
+  - generate a useful starter MDX query for a requested cube
+  - inspect TM1 process metadata
+
+  When answering, be clear about which server, cube, or process was used.
+  Do not invent cube names, process names, dimensions, or metadata. If a user
+  asks for something ambiguous, first list the relevant available objects and
+  then continue from the user's selection.
+
+llm: groq/openai/gpt-oss-120b
+style: default
+
+tools:
+  - my-pa-saas-server:get_available_tm1_servers
+  - my-pa-saas-server:list_server_cubes_with_metadata
+  - my-pa-saas-server:get_mdx_for_recommended_view
+  - my-pa-saas-server:get_tm1_process_details
+  - my-pa-saas-server-analysis:get_tm1_process_details
+
+config:
+  hidden: false
+  enable_cot: false
+
+tags:
+  - planning-analytics
+  - tm1
+  - mcp
+  - newretail
+```
+
+## 7. Create `scripts/import_pa_wxo.sh`
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+: "${WXO_ENV_NAME:?Set WXO_ENV_NAME}"
+: "${WXO_API_KEY:?Set WXO_API_KEY}"
+: "${PA_AUTHORIZATION_HEADER:?Set PA_AUTHORIZATION_HEADER}"
+
+echo "Activating wxO environment: ${WXO_ENV_NAME}"
+orchestrate env activate "$WXO_ENV_NAME" --api-key "$WXO_API_KEY" --skip-version-check
+
+echo "Creating/updating PA key-value connection"
+orchestrate connections add -a pa_mcp_auth || true
+orchestrate connections configure -a pa_mcp_auth --env draft --type team --kind key_value --server-url "${PA_BASE_URL:-https://eu-central-1.planninganalytics.saas.ibm.com}" || true
+orchestrate connections configure -a pa_mcp_auth --env live --type team --kind key_value --server-url "${PA_BASE_URL:-https://eu-central-1.planninganalytics.saas.ibm.com}" || true
+orchestrate connections set-credentials -a pa_mcp_auth --env draft -e "Authorization=${PA_AUTHORIZATION_HEADER}"
+orchestrate connections set-credentials -a pa_mcp_auth --env live -e "Authorization=${PA_AUTHORIZATION_HEADER}"
+
+echo "Importing PA cube MCP toolkit"
+orchestrate toolkits add \
+  --kind mcp \
+  --name my-pa-saas-server \
+  --description "IBM Planning Analytics SaaS MCP wrapper for NewRetail" \
+  --package-root "$PROJECT_ROOT/pa_mcp_wrapper" \
+  --language python \
+  --command "python -m pa_mcp_wrapper" \
+  --tools get_available_tm1_servers,list_server_cubes_with_metadata,get_mdx_for_recommended_view,get_tm1_process_details \
+  --app-id pa_mcp_auth
+
+echo "Importing PA analysis MCP toolkit"
+orchestrate toolkits add \
+  --kind mcp \
+  --name my-pa-saas-server-analysis \
+  --description "IBM Planning Analytics SaaS process analysis MCP wrapper for NewRetail" \
+  --package-root "$PROJECT_ROOT/pa_mcp_wrapper" \
+  --language python \
+  --command "python -m pa_mcp_wrapper" \
+  --tools get_tm1_process_details \
+  --app-id pa_mcp_auth
+
+echo "Creating PA NewRetail agent"
+orchestrate agents create \
+  --file "$PROJECT_ROOT/agent/pa_newretail_agent.yaml"
+
+echo "Done. Verify with:"
+echo "  orchestrate toolkits list"
+echo "  orchestrate agents list"
+```
+
+Make it executable:
+
+```bash
+chmod +x scripts/import_pa_wxo.sh
+```
+
+## 8. Create `.env.example`
+
+```bash
+# wxO target
+WXO_ENV_NAME=replace-with-their-wxo-env-name
+WXO_API_KEY=replace-with-their-wxo-api-key
+
+# Planning Analytics auth
+# Use the full header value, for example:
+# PA_AUTHORIZATION_HEADER="Basic base64-of-apikey-colon-api-key"
+PA_AUTHORIZATION_HEADER=replace-with-basic-auth-header
+
+# Planning Analytics REST defaults used by the wrapper
+PA_TENANT_ID=DLKN379EQ2M7
+PA_SERVER=NewRetail
+PA_BASE_URL=https://eu-central-1.planninganalytics.saas.ibm.com/api/DLKN379EQ2M7/v0/tm1
+```
+
+## 9. Create `README_WXO_DEPLOYMENT.md`
+
+```markdown
+# Deloitte PA wxO Project
+
+This folder contains the working watsonx Orchestrate deployment assets for the Planning Analytics NewRetail MCP wrapper.
+
+## Important Files
+
+- `pa_mcp_wrapper/` - local MCP server package that wraps the working Planning Analytics REST API.
+- `agent/pa_newretail_agent.yaml` - agent definition for the PA NewRetail assistant.
+- `scripts/import_pa_wxo.sh` - repeatable import script for the connection, MCP toolkits, and agent.
+- `.env.example` - template for local environment variables. Copy it to `.env` and fill values locally.
+
+## What This Deploys
+
+The deployment creates a key-value connection named `pa_mcp_auth`, imports two MCP toolkits, and creates an agent named `pa_newretail_agent`.
+
+The cube toolkit imports:
+
+- `get_available_tm1_servers`
+- `list_server_cubes_with_metadata`
+- `get_mdx_for_recommended_view`
+- `get_tm1_process_details`
+
+The analysis toolkit imports:
+
+- `get_tm1_process_details`
+
+## Basic Flow
+
+1. Verify your wxO CLI is installed and logged in.
+2. Copy `.env.example` to `.env`.
+3. Fill in non-placeholder values in `.env`.
+4. Source `.env`.
+5. Run `scripts/import_pa_wxo.sh`.
+6. Verify with `orchestrate toolkits list` and `orchestrate agents list`.
+
+Do not commit or share `.env`, API keys, private keys, or generated credential exports.
+```
+
+## 10. Run the setup
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env`, then load it:
+
+```bash
+source .env
+```
+
+Import into their wxO environment:
+
+```bash
+bash scripts/import_pa_wxo.sh
+```
+
+Verify:
+
+```bash
+orchestrate toolkits list
+orchestrate agents list
+```
+
+Test prompt:
+
+```text
+List the available TM1 server and show me the cubes.
+```
